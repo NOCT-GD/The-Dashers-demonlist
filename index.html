@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Dasher’s demonlist</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400;0,600;0,700;1,400&family=Oswald:wght@600&display=swap">
+<style>
+:root{--bg:#161a24;--fg:#e6e8ee;--mut:#9aa1b4;--card:#232938;--bd:#3d4559;--acc:#2b9be8;--or:#f08a4b;color-scheme:dark}
+@media (prefers-color-scheme:light){:root{--bg:#eef0f5;--fg:#1c2030;--mut:#5d6579;--card:#fff;--bd:#c3c8d6;color-scheme:light}}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.4 Montserrat,system-ui,sans-serif}
+#app{max-width:760px;margin:0 auto;padding-bottom:30px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:16px;flex-wrap:wrap}
+.logo{font:600 1.9rem/1 Oswald,Impact,sans-serif;text-transform:uppercase}.logo span{color:var(--acc);font-size:.7em}
+.mut{color:var(--mut);font-size:.9rem}
+nav{display:flex;border-bottom:1px solid var(--bd);background:var(--card)}
+button,input,select,textarea{font:inherit;color:inherit;background:var(--bg);border:1px solid var(--bd);border-bottom:2px solid var(--or);border-radius:0;padding:9px 12px;width:100%;box-sizing:border-box}
+button{cursor:pointer;width:auto}
+.tab{flex:1;background:none;border:0;padding:14px 4px;font-weight:700;color:var(--mut)}.tab.on{color:var(--fg);box-shadow:inset 0 -3px var(--acc)}
+.btn{background:var(--acc);border:0;color:#fff;font-weight:700}.red{background:#c0392b;border:0;color:#fff}
+.card{border:1px dashed var(--bd);padding:22px;margin:22px 12px;background:var(--card);overflow-wrap:anywhere;text-align:center}
+.card.lv{cursor:pointer}
+.cv{display:block;width:100%;height:auto;margin:-6px 0 8px}
+.card h2{margin:.15em 0;font-size:1.6rem}.card h3{margin:.2em 0}
+.hd{display:flex;align-items:center;justify-content:space-between;gap:8px}.hd button{font-size:1.6rem;padding:2px 12px;border:0;background:none}
+.by{font-weight:700;color:var(--mut)}.by b{color:var(--fg);border-bottom:1px dotted currentColor}
+.q{font-style:italic;color:var(--mut)}
+hr{border:0;border-top:1px solid var(--bd);margin:16px 0}
+.vid{position:relative;padding-top:56.25%;margin:14px 0}.vid iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.grid{display:flex;flex-wrap:wrap;justify-content:center;gap:14px 30px}.cell b{display:block}
+.rec{display:flex;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px solid var(--bd);text-align:left}
+a{color:var(--acc);font-weight:600}
+.form{display:flex;flex-direction:column;gap:10px}.fld p{margin:.2em 0 .6em}
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:4px 0;text-align:left}
+.row.sm{padding-left:16px;font-size:.9rem;color:var(--mut)}.row button{padding:6px 10px}
+.ok{color:#3cb371;font-weight:700}.err{color:var(--or);font-weight:700}
+</style></head>
+<body><div id="app"></div>
+<script>
+// ====== CONFIG: put your Cloudflare Worker URL here (no trailing slash) ======
+const API='https://demonlist.nocturnis-gd.workers.dev';
+const MAIN=75; // main list = top 75 (raw footage required)
+// =============================================================================
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const safe=u=>/^https?:\/\//i.test(u||'')?u:'#';
+const full=i=>350*Math.pow(0.955,i), sc=(i,p)=>p>=100?full(i):full(i)*0.1;
+const yt=u=>{const m=/(?:youtu\.be\/|[?&]v=|embed\/|shorts\/)([\w-]{11})/.exec(u||'');return m?m[1]:''};
+const F=[['name','Name'],['creator','Creator(s)'],['publisher','Publisher'],['verifier','Verifier'],['id','Level ID'],['password','Level password (e.g. Free Copy)'],['length','Length (e.g. 2m:04s)'],['objects','Object count'],['diff','In-game difficulty'],['ver','Created in (e.g. 2.2)'],['song','Song'],['listPct','List % (minimum to qualify)'],['video','Verification video URL'],['img','Image URL (optional)'],['desc','Short description / quote (optional)']];
+let S={levels:[]},me=null,subs=[],tab='lvl',sel=-1,ei=-1,msg='',tk=localStorage.getItem('tk')||'';
+if(location.hash.startsWith('#tk=')){tk=location.hash.slice(4);localStorage.setItem('tk',tk);history.replaceState(null,'',location.pathname)}
+const api=(p,o={})=>fetch(API+p,{...o,headers:{'content-type':'application/json',...(tk?{authorization:'Bearer '+tk}:{})}}).then(async r=>{const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||r.status);return j});
+const login=()=>{location.href=API+'/auth/login'};
+const empty=m=>`<p class="mut" style="margin:22px 12px">${m}</p>`;
+
+const lvl=()=>S.levels.length?S.levels.map((l,i)=>`<div class="card lv" data-open="${i}">${/^https?:/i.test(l.img||'')?`<img class="cv" src="${safe(l.img)}" alt="">`:''}<h2>#${i+1} – ${esc(l.name)}</h2><div class="by">by <b>${esc(l.creator||'?')}</b></div><div class="mut">${full(i).toFixed(2)} points${i<MAIN?'':' · extended list'}</div></div>`).join(''):empty('No levels yet.');
+
+function detail(i){
+  const L=S.levels[i],c=(k,v)=>`<div class="cell"><b>${k}</b>${v?esc(v):'—'}</div>`,id=yt(L.video);
+  const rs=(L.records||[]).slice().sort((a,b)=>b.pct-a.pct);
+  return `<div class="card"><button data-back style="float:left;font-size:.9rem">‹ List</button><div style="clear:both"></div>
+<div class="hd"><button data-nav="-1">‹</button><h2>#${i+1} – ${esc(L.name)}</h2><button data-nav="1">›</button></div>
+<div class="by">by <b>${esc(L.creator||'?')}</b>${L.publisher?`, published by <b>${esc(L.publisher)}</b>`:''}${L.verifier?`, verified by <b>${esc(L.verifier)}</b>`:''}</div>
+${L.desc?`<hr><div class="q">“${esc(L.desc)}”</div><hr>`:'<hr>'}
+${id?`<div class="vid"><iframe src="https://www.youtube.com/embed/${id}" allowfullscreen loading="lazy"></iframe></div>`:/^https?:/i.test(L.video||'')?`<p><a href="${safe(L.video)}" target="_blank" rel="noopener">▶ Watch verification</a></p>`:''}
+<div class="grid">${c('Level Password',L.password)}${c('Level ID',L.id)}${c('Level Length',L.length)}${c('Object Count',L.objects)}${c('In-Game Difficulty',L.diff)}${c('Created In',L.ver)}${c('Newgrounds Song',L.song)}${c('Demonlist score (100%)',full(i).toFixed(2))}${L.listPct?c(`Demonlist score (${L.listPct}%)`,(full(i)*0.1).toFixed(2)):''}</div></div>
+<div class="card"><h2>Records</h2><div class="mut">${L.listPct?esc(L.listPct)+'% or better required to qualify':'No minimum set'}</div><hr>${rs.length?rs.map(r=>`<div class="rec"><a href="${safe(r.url)}" target="_blank" rel="noopener">${esc(r.p)}</a><span>${esc(r.pct)}%</span></div>`).join(''):'<b>No records yet! Be the first to achieve one!</b>'}</div>`;
+}
+
+function pl(){
+  const m={};
+  S.levels.forEach((l,i)=>(l.records||[]).forEach(r=>{const o=m[r.p]||(m[r.p]={p:r.p,pts:0,n:0,top:'',ti:999});o.pts+=sc(i,+r.pct);o.n++;if(i<o.ti){o.ti=i;o.top=l.name}}));
+  const a=Object.values(m).sort((x,y)=>y.pts-x.pts);
+  return a.length?a.map((o,i)=>`<div class="card"><h2>#${i+1} – ${esc(o.p)}</h2><div class="mut">${o.pts.toFixed(2)} points · ${o.n} record${o.n>1?'s':''}</div><div class="mut">Hardest: ${esc(o.top)}</div></div>`).join(''):empty('No players yet.');
+}
+
+const fld=(t,d,i)=>`<div class="fld"><h3>${t}</h3><p class="mut">${d}</p>${i}</div>`;
+function sub(){
+  if(!me)return `<div class="card form"><h2>Record Submission</h2><p>You must be logged in with Discord to submit a record.</p><button class="btn" data-login>Login with Discord</button></div>`;
+  if(!me.name)return `<div class="card form"><h2>Link your account</h2><p class="mut">Choose the name you want on the demonlist. It will be linked to your Discord account (${esc(me.username)}).</p><input id="pn" maxlength="24" placeholder="Your demonlist name"><button id="pb" class="btn">Link account</button><p id="pe" class="err"></p></div>`;
+  if(!S.levels.length)return empty('No levels yet.');
+  return `<div class="card form"><h2>Record Submission</h2><p class="mut">Your record is sent to the mods on Discord. You will be notified there when it is accepted or refused.</p>
+${fld('Demon','The demon the record was made on.',`<select id="sl">${S.levels.map((l,i)=>`<option value="${i}">#${i+1} – ${esc(l.name)}</option>`).join('')}</select>`)}
+${fld('Holder','The player holding the record (linked to your Discord account).',`<b>${esc(me.name)}</b>`)}
+${fld('Progress','Percentage achieved. Must be at least the demon’s requirement and at most 100.','<input id="sq" type="number" inputmode="numeric" placeholder="e.g. 50, 98"><div id="sh" class="mut"></div>')}
+${fld('Video','Proof video. If the record was done on stream but not uploaded, give a Twitch link.<br><i>Note:</i> only submit well-formed URLs!','<input id="su" placeholder="e.g. https://youtu.be/cHEGAqOgddA">')}
+${fld('Raw footage','<span id="rd"></span>','<input id="sr" placeholder="https://drive.google.com/file/d/…/view">')}
+${fld('Notes or comments','Any additional notes for the moderator.','<textarea id="sn" rows="3"></textarea>')}
+<button id="sb" class="btn">Submit record</button><p id="se" class="err"></p></div>`;
+}
+function bindSub(){
+  if($('#pb'))$('#pb').onclick=async()=>{try{await api('/api/profile',{method:'POST',body:JSON.stringify({name:$('#pn').value.trim()})});me=await api('/api/me');render()}catch(e){$('#pe').textContent=e.message}};
+  if(!$('#sl'))return;
+  const upd=()=>{const i=+$('#sl').value,L=S.levels[i];$('#rd').textContent=i<MAIN?'Unedited, untrimmed video on a non-compressing service (e.g. Google Drive). Required for every main list demon (top '+MAIN+').':'Optional for demons outside the main list.';$('#sh').textContent=L.listPct?'Minimum for this demon: '+L.listPct+'%':''};
+  $('#sl').onchange=upd;upd();
+  $('#sb').onclick=async()=>{
+    const i=+$('#sl').value,L=S.levels[i],q=+$('#sq').value,u=$('#su').value.trim(),r=$('#sr').value.trim(),e=$('#se');e.className='err';let t='';
+    if(!(q>=(+L.listPct||1)&&q<=100))t='Progress must be between '+(L.listPct||1)+' and 100.';
+    else if(!/^https?:\/\//i.test(u))t='Enter a valid video URL.';
+    else if(i<MAIN&&!/^https?:\/\//i.test(r))t='Raw footage is required for main list demons.';
+    if(t){e.textContent=t;return}
+    try{await api('/api/submit',{method:'POST',body:JSON.stringify({lvl:L.name,pct:q,video:u,raw:r,notes:$('#sn').value})});e.className='ok';e.textContent='Submitted ✓ The mods have been notified on Discord.';$('#sb').disabled=true}catch(x){e.textContent=x.message}
+  };
+}
+
+function adm(){
+  const e=ei>=0?S.levels[ei]:{},n=msg;msg='';
+  return `${n?`<p class="ok" style="margin:16px 12px">${n}</p>`:''}
+<div class="card"><h3>Pending submissions (${subs.length})</h3>${subs.length?subs.map(s=>`<div class="rec" style="display:block"><b>${esc(s.player)}</b> – ${esc(s.lvl)} – ${esc(s.pct)}%<br><a href="${safe(s.video)}" target="_blank" rel="noopener">video</a>${s.raw?` · <a href="${safe(s.raw)}" target="_blank" rel="noopener">raw</a>`:''}<br><span class="mut">${esc(s.notes||'')}</span><br><button class="btn" data-rv="${s.id}|1">Accept</button> <button class="red" data-rv="${s.id}|0">Refuse</button></div>`).join(''):'<p class="mut">Nothing pending.</p>'}</div>
+<div class="card form"><h3>Level editor</h3><select id="es"><option value="-1">+ New level</option>${S.levels.map((l,i)=>`<option value="${i}"${i==ei?' selected':''}>#${i+1} ${esc(l.name)}</option>`).join('')}</select>${F.map(([k,t])=>`<input id="f_${k}" placeholder="${t}" value="${esc(e[k])}">`).join('')}<button id="sv" class="btn">${ei>=0?'Save changes':'Add level (at the bottom)'}</button></div>
+<div class="card form"><h3>Add a verified record</h3><select id="rl">${S.levels.map((l,i)=>`<option value="${i}">#${i+1} ${esc(l.name)}</option>`).join('')}</select><input id="rp" placeholder="Player name"><input id="rq" type="number" placeholder="Progress %"><input id="ru" placeholder="Video link"><button id="rb" class="btn">Add record</button></div>
+<div class="card"><h3>Order and deletion</h3>${S.levels.map((l,i)=>`<div class="row"><span>#${i+1} ${esc(l.name)}</span><span><button data-u="${i}">↑</button> <button data-d="${i}">↓</button> <button data-x="${i}">✕</button></span></div>${(l.records||[]).map((r,j)=>`<div class="row sm"><span>${esc(r.p)} · ${esc(r.pct)}%</span><button data-r="${i}.${j}">✕</button></div>`).join('')}`).join('')}</div>
+<div style="margin:0 12px"><button id="pub" class="btn" style="width:100%">Save to site</button></div>`;
+}
+function bindAdm(){
+  $('#es').onchange=()=>{ei=+$('#es').value;render()};
+  $('#sv').onclick=()=>{const v={};F.forEach(([k])=>v[k]=$('#f_'+k).value.trim());if(!v.name)return;if(ei>=0)Object.assign(S.levels[ei],v);else{S.levels.push(Object.assign({records:[]},v));ei=S.levels.length-1}msg='Changed ✓ — click “Save to site” to put it online.';render()};
+  $('#rb').onclick=()=>{const p=$('#rp').value.trim(),u=$('#ru').value.trim(),q=+$('#rq').value;if(p&&u&&q>0&&S.levels.length){S.levels[+$('#rl').value].records.push({p,pct:q,url:u});msg='Record added ✓ — click “Save to site”.';render()}};
+  document.querySelectorAll('[data-u],[data-d],[data-x],[data-r]').forEach(b=>b.onclick=()=>{const d=b.dataset,L=S.levels;
+    if(d.u!=null){const i=+d.u;if(i>0)[L[i-1],L[i]]=[L[i],L[i-1]]}else if(d.d!=null){const i=+d.d;if(i<L.length-1)[L[i+1],L[i]]=[L[i],L[i+1]]}else if(d.x!=null)L.splice(+d.x,1);else{const[i,j]=d.r.split('.').map(Number);L[i].records.splice(j,1)}ei=-1;render()});
+  document.querySelectorAll('[data-rv]').forEach(b=>b.onclick=async()=>{const[id,ok]=b.dataset.rv.split('|');let reason='';if(ok==='0'){reason=prompt('Reason for refusal (optional)');if(reason===null)return}
+    try{await api('/api/review',{method:'POST',body:JSON.stringify({id,ok:ok==='1',reason})});S=await api('/api/data');subs=await api('/api/subs');msg=ok==='1'?'Accepted ✓ — posted on Discord.':'Refused ✓ — posted on Discord.'}catch(e){msg='Error: '+e.message}render()});
+  $('#pub').onclick=async()=>{try{await api('/api/data',{method:'POST',body:JSON.stringify(S)});msg='Saved ✓';}catch(e){msg='Error: '+e.message}render()};
+}
+
+function render(){
+  const tabs=[['lvl','List'],['pl','Players'],['sub','Submit']].concat(me&&me.mod?[['adm','Mods']]:[]);
+  let h=`<div class="top"><div class="logo">The Dasher’s<span> demonlist</span></div><div>${me?`<span class="mut">${esc(me.username)}${me.name?' · '+esc(me.name):''}</span> <button id="lo">Log out</button>`:'<button class="btn" data-login>Login with Discord</button>'}</div></div><nav>`+tabs.map(([k,n])=>`<button class="tab ${tab==k?'on':''}" data-t="${k}">${n}</button>`).join('')+'</nav>';
+  h+=tab=='lvl'?(sel>=0&&S.levels[sel]?detail(sel):lvl()):tab=='pl'?pl():tab=='sub'?sub():adm();
+  $('#app').innerHTML=h;
+  document.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{tab=b.dataset.t;sel=-1;render()});
+  document.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>{sel=+b.dataset.open;render();scrollTo(0,0)});
+  document.querySelectorAll('[data-nav]').forEach(b=>b.onclick=()=>{const n=sel+ +b.dataset.nav;if(n>=0&&n<S.levels.length){sel=n;render();scrollTo(0,0)}});
+  document.querySelectorAll('[data-back]').forEach(b=>b.onclick=()=>{sel=-1;render()});
+  document.querySelectorAll('[data-login]').forEach(b=>b.onclick=login);
+  if($('#lo'))$('#lo').onclick=()=>{localStorage.removeItem('tk');tk='';me=null;subs=[];tab='lvl';render()};
+  if(tab=='sub')bindSub();
+  if(tab=='adm')bindAdm();
+}
+(async()=>{
+  render();
+  try{S=await api('/api/data');S.levels=(S.levels||[]).map(l=>({records:[],...l}))}catch(e){}
+  if(tk){try{me=await api('/api/me');if(me.mod)subs=await api('/api/subs')}catch(e){tk='';localStorage.removeItem('tk')}}
+  render();
+})();
+</script></body></html>
