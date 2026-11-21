@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Dasher’s demonlist</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400;0,600;0,700;0,800;1,400&family=Oswald:wght@600&display=swap">
+<style>
+:root{--bg:#161a24;--fg:#e6e8ee;--mut:#9aa1b4;--card:#232938;--bd:#3d4559;--acc:#2b9be8;--or:#f08a4b;color-scheme:dark}
+@media (prefers-color-scheme:light){:root:not([data-theme]){--bg:#eef0f5;--fg:#1c2030;--mut:#5d6579;--card:#fff;--bd:#c3c8d6;color-scheme:light}}
+:root[data-theme="light"]{--bg:#eef0f5;--fg:#1c2030;--mut:#5d6579;--card:#fff;--bd:#c3c8d6;color-scheme:light}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.4 Montserrat,system-ui,sans-serif}
+#app{max-width:760px;margin:0 auto;padding-bottom:30px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:16px;flex-wrap:wrap}
+.logo{font:600 1.9rem/1 Oswald,Impact,sans-serif;text-transform:uppercase}.logo span{color:var(--acc);font-size:.7em}
+.mut{color:var(--mut);font-size:.9rem}
+nav{display:flex;border-bottom:1px solid var(--bd);background:var(--card)}
+button,input,select,textarea{font:inherit;color:inherit;background:var(--bg);border:1px solid var(--bd);border-bottom:2px solid var(--or);border-radius:0;padding:9px 12px;width:100%;box-sizing:border-box}
+button{cursor:pointer;width:auto}
+.tab{flex:1;background:none;border:0;padding:14px 4px;font-weight:700;color:var(--mut)}.tab.on{color:var(--fg);box-shadow:inset 0 -3px var(--acc)}
+.btn{background:var(--acc);border:0;color:#fff;font-weight:700}.red{background:#c0392b;border:0;color:#fff}
+.card{border:1px dashed var(--bd);padding:22px;margin:22px 12px;background:var(--card);overflow-wrap:anywhere;text-align:center}
+.card.lv{cursor:pointer}
+.cv{display:block;width:100%;height:auto;margin:-6px 0 8px}
+.card h2{margin:.15em 0;font-size:1.6rem}.card h3{margin:.2em 0}
+.hd{display:flex;align-items:center;justify-content:space-between;gap:8px}.hd button{font-size:1.6rem;padding:2px 12px;border:0;background:none}
+.by{font-weight:700;color:var(--mut)}.by b{color:var(--fg);border-bottom:1px dotted currentColor}
+.q{font-style:italic;color:var(--mut)}
+hr{border:0;border-top:1px solid var(--bd);margin:16px 0}
+.vid{position:relative;padding-top:56.25%;margin:14px 0}.vid iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.grid{display:flex;flex-wrap:wrap;justify-content:center;gap:14px 30px}.cell b{display:block}
+.rec{display:flex;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px solid var(--bd);text-align:left}
+a{color:var(--acc);font-weight:600}
+.form{display:flex;flex-direction:column;gap:10px}.fld p{margin:.2em 0 .6em}
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:4px 0;text-align:left}
+.row.sm{padding-left:16px;font-size:.9rem;color:var(--mut)}.row button{padding:6px 10px}
+.ok{color:#3cb371;font-weight:700}.err{color:var(--or);font-weight:700}
+.tbl{width:100%;border-collapse:collapse;text-align:center}.tbl th{background:var(--acc);color:#fff;padding:12px 6px}.tbl td{padding:12px 6px;border-bottom:1px solid var(--bd)}
+.plist{border:1px solid var(--bd);margin-top:10px;background:var(--card);text-align:left}.pr{padding:7px 8px;cursor:pointer}.pr:hover,.pr.on{background:var(--bg)}.pr i{font-size:.75rem;margin-left:4px;color:var(--mut)}
+.pg{display:flex;justify-content:space-between;margin-top:8px}.pg button{background:none;border:0;font-weight:800;text-transform:uppercase;color:var(--mut)}
+.dc{line-height:1.8;margin:6px 0}.tm{font-weight:800}.te{font-weight:600}.tl{font-weight:400}
+.av{width:20px;height:20px;border-radius:50%;object-fit:cover;vertical-align:-4px;margin-right:4px}.av.big{width:72px;height:72px;display:block;margin:0 auto 8px}
+.tools{display:flex;gap:6px;align-items:center;flex-wrap:wrap}.clr{width:38px;height:38px;padding:2px;cursor:pointer}
+.card.row2{display:flex;gap:16px;align-items:center;text-align:left;padding:14px 18px;margin:14px 12px}
+.th2{width:206px;height:116px;object-fit:cover;flex:none;background:var(--bg)}
+.lt h2{font-size:1.3rem;margin:0 0 4px}.lt .by{font-size:.95rem;margin-bottom:2px}
+@media(max-width:560px){.th2{width:110px;height:62px}.lt h2{font-size:1.05rem}.card.row2{gap:10px;padding:10px}}
+</style></head>
+<body><div id="app"></div>
+<script>
+// ====== CONFIG: put your Cloudflare Worker URL here (no trailing slash) ======
+const API='https://demonlist.nocturnis-gd.workers.dev';
+// List size lives in the data (S.size, default 30): first half = main, second half = extended, below = legacy (hidden, no points)
+const SZ=()=>S.size||30,MN=()=>Math.ceil(SZ()/2),LN=()=>Math.min(SZ(),S.levels.length);
+// =============================================================================
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const safe=u=>/^https?:\/\//i.test(u||'')?u:'#';
+const full=i=>350*Math.pow(0.955,i), sc=(i,p)=>i>=SZ()?0:p>=100?full(i):full(i)*0.1;
+const yt=u=>{const m=/(?:youtu\.be\/|[?&]v=|embed\/|shorts\/)([\w-]{11})/.exec(u||'');return m?m[1]:''};
+const F=[['name','Name'],['creator','Creator(s)'],['publisher','Publisher'],['verifier','Verifier'],['id','Level ID'],['password','Level password (e.g. Free Copy)'],['length','Length (e.g. 2m:04s)'],['objects','Object count'],['diff','In-game difficulty'],['ver','Created in (e.g. 2.2)'],['song','Song'],['listPct','List % (minimum to qualify)'],['video','Verification video URL'],['img','Image URL (optional)'],['desc','Short description / quote (optional)']];
+let players={},svq='',svp=0,svs='',svo='alpha',svc='All',S={levels:[]},me=null,subs=[],tab='lvl',sel=-1,ei=-1,msg='',tk=localStorage.getItem('tk')||'';
+if(location.hash.startsWith('#tk=')){tk=location.hash.slice(4);localStorage.setItem('tk',tk);history.replaceState(null,'',location.pathname)}
+const api=(p,o={})=>fetch(API+p,{...o,headers:{'content-type':'application/json',...(tk?{authorization:'Bearer '+tk}:{})}}).then(async r=>{const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||r.status);return j});
+const login=()=>{location.href=API+'/auth/login'};
+const dark=()=>{const t=localStorage.getItem('theme');return t?t==='dark':!matchMedia('(prefers-color-scheme: light)').matches};
+const accent=()=>localStorage.getItem('accent')||'#2b9be8';
+function applyTheme(){const t=localStorage.getItem('theme'),c=localStorage.getItem('accent'),r=document.documentElement;if(t)r.dataset.theme=t;else delete r.dataset.theme;if(c)r.style.setProperty('--acc',c);else r.style.removeProperty('--acc')}
+const empty=m=>`<p class="mut" style="margin:22px 12px">${m}</p>`;
+
+const lvl=()=>LN()?S.levels.slice(0,LN()).map((l,i)=>`<div class="card lv row2" data-open="${i}">${/^https?:/i.test(l.img||'')?`<img class="th2" src="${safe(l.img)}" alt="">`:'<div class="th2"></div>'}<div class="lt"><h2>#${i+1} – ${esc(l.name)}</h2><div class="by">verified by <b>${esc(l.verifier||'?')}</b></div><div class="mut">${l.listPct?`${(full(i)*0.1).toFixed(2)} (${esc(l.listPct)}%) — `:''}${full(i).toFixed(2)} (100%) points</div></div></div>`).join(''):empty('No levels yet.');
+
+function detail(i){
+  const L=S.levels[i],c=(k,v)=>`<div class="cell"><b>${k}</b>${v?esc(v):'—'}</div>`,id=yt(L.video);
+  const rs=(L.records||[]).slice().sort((a,b)=>b.pct-a.pct);
+  return `<div class="card"><button data-back style="float:left;font-size:.9rem">‹ List</button><div style="clear:both"></div>
+<div class="hd"><button data-nav="-1">‹</button><h2>#${i+1} – ${esc(L.name)}</h2><button data-nav="1">›</button></div>
+<div class="by">by <b>${esc(L.creator||'?')}</b>${L.publisher?`, published by <b>${esc(L.publisher)}</b>`:''}${L.verifier?`, verified by <b>${esc(L.verifier)}</b>`:''}</div>
+${L.desc?`<hr><div class="q">“${esc(L.desc)}”</div><hr>`:'<hr>'}
+${id?`<div class="vid"><iframe src="https://www.youtube.com/embed/${id}" allowfullscreen loading="lazy"></iframe></div>`:/^https?:/i.test(L.video||'')?`<p><a href="${safe(L.video)}" target="_blank" rel="noopener">▶ Watch verification</a></p>`:''}
+<div class="grid">${c('Level Password',L.password)}${c('Level ID',L.id)}${c('Level Length',L.length)}${c('Object Count',L.objects)}${c('In-Game Difficulty',L.diff)}${c('Created In',L.ver)}${c('Newgrounds Song',L.song)}${c('Demonlist score (100%)',full(i).toFixed(2))}${L.listPct?c(`Demonlist score (${L.listPct}%)`,(full(i)*0.1).toFixed(2)):''}</div></div>
+<div class="card"><h2>Records</h2><div class="mut">${L.listPct?esc(L.listPct)+'% or better required to qualify':'No minimum set'}</div><hr>${rs.length?rtable(rs):'<b>No records yet! Be the first to achieve one!</b>'}</div>`;
+}
+
+const fld=(t,d,i)=>`<div class="fld"><h3>${t}</h3><p class="mut">${d}</p>${i}</div>`;
+const CT='US|United States|NA;CA|Canada|NA;MX|Mexico|NA;BR|Brazil|SA;AR|Argentina|SA;CL|Chile|SA;CO|Colombia|SA;PE|Peru|SA;VE|Venezuela|SA;UY|Uruguay|SA;FR|France|EU;GB|United Kingdom|EU;DE|Germany|EU;ES|Spain|EU;IT|Italy|EU;PT|Portugal|EU;NL|Netherlands|EU;BE|Belgium|EU;CH|Switzerland|EU;AT|Austria|EU;SE|Sweden|EU;NO|Norway|EU;DK|Denmark|EU;FI|Finland|EU;PL|Poland|EU;CZ|Czechia|EU;SK|Slovakia|EU;HU|Hungary|EU;RO|Romania|EU;BG|Bulgaria|EU;GR|Greece|EU;TR|Turkey|AS;UA|Ukraine|EU;RU|Russia|EU;BY|Belarus|EU;LT|Lithuania|EU;LV|Latvia|EU;EE|Estonia|EU;IE|Ireland|EU;HR|Croatia|EU;RS|Serbia|EU;SI|Slovenia|EU;JP|Japan|AS;KR|South Korea|AS;CN|China|AS;IN|India|AS;ID|Indonesia|AS;PH|Philippines|AS;TH|Thailand|AS;VN|Vietnam|AS;MY|Malaysia|AS;SG|Singapore|AS;SA|Saudi Arabia|AS;AE|United Arab Emirates|AS;IL|Israel|AS;EG|Egypt|AF;MA|Morocco|AF;DZ|Algeria|AF;TN|Tunisia|AF;ZA|South Africa|AF;NG|Nigeria|AF;KE|Kenya|AF;AU|Australia|OC;NZ|New Zealand|OC';
+const CM={};CT.split(';').forEach(x=>{const[c,n,k]=x.split('|');CM[c]={n,k}});
+const CONT={EU:'Europe',NA:'North America',SA:'South America',AS:'Asia',AF:'Africa',OC:'Oceania'};
+const flag=c=>c&&CM[c]?`<img src="https://flagcdn.com/w20/${c.toLowerCase()}.png" width="20" height="15" alt="" style="vertical-align:-2px"> `:'';
+const dn=n=>{const p=players[n]||{};return `${p.pic?`<img class="av" src="${API}/api/pic/${p.pic}" alt="">`:''}${flag(p.nat)}${p.tag?`[${esc(p.tag)}] `:''}${esc(n)}`};
+const vlabel=u=>/youtu/i.test(u)?'YouTube':/twitch/i.test(u)?'Twitch':'Video';
+const rtable=rs=>`<table class="tbl"><thead><tr><th>Record Holder</th><th>Progress</th><th>Video Proof</th></tr></thead><tbody>${rs.map(r=>`<tr><td><b>${dn(r.p)}</b></td><td><b>${esc(r.pct)}%</b>${r.mobile?' 📱':''}</td><td><a href="${safe(r.url)}" target="_blank" rel="noopener">${vlabel(r.url)} ↗</a></td></tr>`).join('')}</tbody></table>`;
+
+function pstats(){
+  const m={};
+  S.levels.forEach((l,i)=>(l.records||[]).forEach(r=>{const o=m[r.p]||(m[r.p]={p:r.p,pts:0,recs:[]});o.pts+=sc(i,+r.pct);o.recs.push({i,pct:+r.pct,url:r.url,mob:!!r.mobile})}));
+  return Object.values(m).sort((x,y)=>y.pts-x.pts);
+}
+function pl(){
+  let a=pstats();
+  if(svc!=='All')a=a.filter(o=>(CM[(players[o.p]||{}).nat]||{}).k===svc);
+  a=a.map((o,i)=>({...o,rank:i+1}));
+  const cur=a.find(o=>o.p===svs),q=svq.toLowerCase();
+  if(q)a=a.filter(o=>o.p.toLowerCase().includes(q));
+  const per=15,pages=Math.max(1,Math.ceil(a.length/per));if(svp>=pages)svp=pages-1;
+  let det='Click on a player’s name on the left to get started!';
+  if(cur){
+    const srt=svo==='pos'?(x,y)=>x.i-y.i:(x,y)=>S.levels[x.i].name.localeCompare(S.levels[y.i].name);
+    const tier=i=>i<MN()?'m':i<SZ()?'e':'l',done=cur.recs.filter(r=>r.pct>=100).sort(srt),prog=cur.recs.filter(r=>r.pct<100).sort(srt);
+    const cnt=t=>done.filter(r=>tier(r.i)===t).length,hard=done.length?S.levels[Math.min(...done.map(r=>r.i))].name:'—';
+    const nm=r=>`<span class="t${tier(r.i)}">${esc(S.levels[r.i].name)}</span>${r.mob?' 📱':''}`;
+    det=`${(players[cur.p]||{}).pic?`<img class="av big" src="${API}/api/pic/${players[cur.p].pic}" alt="">`:''}<h2 style="font-size:1.4rem">${dn(cur.p)}${cur.recs.some(r=>r.mob)?' 📱':''}</h2><div class="grid"><div class="cell"><b>Demonlist rank</b>${cur.rank}</div><div class="cell"><b>Demonlist score</b>${cur.pts.toFixed(2)}</div></div><div class="grid" style="margin-top:12px"><div class="cell"><b>Demonlist stats</b>${cnt('m')} Main, ${cnt('e')} Extended, ${cnt('l')} Legacy</div><div class="cell"><b>Hardest demon</b>${esc(hard)}</div></div><h3 style="margin-top:16px">Demons completed</h3><p class="dc">${done.length?done.map(nm).join(' - '):'—'}</p>${prog.length?`<h3>Progress on</h3><p class="dc">${prog.map(r=>`${nm(r)} (${r.pct}%)`).join(' - ')}</p>`:''}`;
+  }
+  return `<div class="card"><h2>Stats Viewer – International</h2><hr><input id="svs" placeholder="Enter to search…" value="${esc(svq)}">
+<div class="plist">${a.slice(svp*per,(svp+1)*per).map(o=>`<div class="pr${o.p===svs?' on':''}" data-p="${esc(o.p)}"><b>#${o.rank}</b> ${dn(o.p)} <i>${o.pts.toFixed(2)}</i></div>`).join('')||'<p class="mut" style="padding:8px">No players.</p>'}</div>
+<div class="pg"><button data-pg="-1">Previous</button><button data-pg="1">Next</button></div><hr><div>${det}</div></div>
+<div class="card"><h3>Demon Sorting</h3><p class="mut">The order in which completed demons should be listed</p><select id="svo"><option value="alpha"${svo=='alpha'?' selected':''}>Alphabetical</option><option value="pos"${svo=='pos'?' selected':''}>By position</option></select></div>
+<div class="card"><h3>Continent</h3><p class="mut">Select a continent below to focus the stats viewer to that continent. Select ‘All’ to reset selection.</p><select id="svc"><option value="All">All</option>${Object.entries(CONT).map(([k,n])=>`<option value="${k}"${svc==k?' selected':''}>${n}</option>`).join('')}</select></div>`;
+}
+function bindSv(){
+  const s=$('#svs');s.oninput=()=>{svq=s.value;svp=0;render();const e=$('#svs');e.focus();e.setSelectionRange(svq.length,svq.length)};
+  document.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>{svs=b.dataset.p;render()});
+  document.querySelectorAll('[data-pg]').forEach(b=>b.onclick=()=>{svp=Math.max(0,svp+ +b.dataset.pg);render()});
+  $('#svo').onchange=e=>{svo=e.target.value;render()};
+  $('#svc').onchange=e=>{svc=e.target.value;svp=0;render()};
+}
+const reload=async()=>{S=await api('/api/data');S.levels=(S.levels||[]).map(l=>({records:[],...l}));players=await api('/api/players')};
+function acc(){
+  if(!me)return `<div class="card form"><h2>Account</h2><p>Log in with Discord to manage your profile.</p><button class="btn" data-login>Login with Discord</button></div>`;
+  return `<div class="card form"><h2>Account</h2><p class="mut">Discord: ${esc(me.username)}</p>
+${fld('Name','The name shown on the demonlist (2–24 characters). Changing it updates your existing records.',`<input id="an" maxlength="24" value="${esc(me.name)}">`)}
+${fld('Nationality','Shown as a flag next to your name.',`<select id="ac"><option value="">—</option>${Object.entries(CM).sort((a,b)=>a[1].n.localeCompare(b[1].n)).map(([c,o])=>`<option value="${c}"${c==me.nat?' selected':''}>${o.n}</option>`).join('')}</select>`)}
+${fld('Clan / team tag','Optional, up to 6 characters, shown as [TAG] before your name.',`<input id="at" maxlength="6" value="${esc(me.tag)}">`)}
+${me.name?fld('Profile picture','Cropped to a square. JPG or PNG.',`${me.pic?`<img class="av big" src="${API}/api/pic/${me.pic}" alt="">`:''}<input id="ap" type="file" accept="image/*">${me.pic?'<button id="ar">Remove picture</button>':''}`):''}
+<button id="as" class="btn">Save profile</button><p id="ae"></p></div>`;
+}
+const sq=f=>new Promise((res,rej)=>{const r=new FileReader();r.onerror=rej;r.onload=()=>{const im=new Image();im.onerror=rej;im.onload=()=>{const m=Math.min(im.width,im.height),c=document.createElement('canvas');c.width=c.height=128;c.getContext('2d').drawImage(im,(im.width-m)/2,(im.height-m)/2,m,m,0,0,128,128);res(c.toDataURL('image/jpeg',0.8))};im.src=r.result};r.readAsDataURL(f)});
+function bindAv(){
+  const set=async img=>{try{await api('/api/avatar',{method:'POST',body:JSON.stringify({img})});me=await api('/api/me');await reload();render()}catch(x){alert(x.message)}};
+  if($('#ap'))$('#ap').onchange=async e=>{const f=e.target.files[0];if(!f)return;let img;try{img=await sq(f)}catch(x){alert('Unreadable image, try a JPG or PNG.');return}set(img)};
+  if($('#ar'))$('#ar').onclick=()=>set('');
+}
+function bindAcc(){
+  if(!$('#as'))return;bindAv();
+  $('#as').onclick=async()=>{try{await api('/api/profile',{method:'POST',body:JSON.stringify({name:$('#an').value.trim(),nat:$('#ac').value,tag:$('#at').value.trim()})});me=await api('/api/me');await reload();render();$('#ae').className='ok';$('#ae').textContent='Saved ✓'}catch(x){$('#ae').className='err';$('#ae').textContent=x.message}};
+}
+function bindBk(){
+  $('#bk').onclick=async()=>{try{const d=await api('/api/export');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(d)],{type:'application/json'}));a.download='demonlist-backup-'+new Date().toISOString().slice(0,10)+'.json';a.click()}catch(e){alert(e.message)}};
+  $('#rs').onchange=async e=>{const f=e.target.files[0];if(!f||!confirm('Restore this backup? It replaces ALL current data.'))return;try{await api('/api/import',{method:'POST',body:await f.text()});await reload();msg='Backup restored ✓';render()}catch(x){alert(x.message)}};
+}
+
+function sub(){
+  if(!me)return `<div class="card form"><h2>Record Submission</h2><p>You must be logged in with Discord to submit a record.</p><button class="btn" data-login>Login with Discord</button></div>`;
+  if(!me.name)return `<div class="card form"><h2>Choose your name first</h2><p class="mut">Open the Account tab, choose your name, nationality and tag, then come back to submit.</p><button class="btn" data-t="acc">Go to Account</button></div>`;
+  if(!S.levels.length)return empty('No levels yet.');
+  return `<div class="card form"><h2>Record Submission</h2><p class="mut">Your record is sent to the mods on Discord. You will be notified there when it is accepted or refused.</p>
+${fld('Demon','The demon the record was made on.',`<select id="sl">${S.levels.slice(0,LN()).map((l,i)=>`<option value="${i}">#${i+1} – ${esc(l.name)}</option>`).join('')}<option value="-1">Other – level not on the list…</option></select>`)}
+<div id="sxw" style="display:none">${fld('Level name','This level is not on the list yet. Write its exact name: if your record is accepted, the level will be added.','<input id="sx" placeholder="Level name"><input id="sy" placeholder="Level ID (optional)" style="margin-top:8px">')}</div>
+${fld('Holder','The player holding the record (linked to your Discord account).',`<b>${esc(me.name)}</b>`)}
+${fld('Progress','Percentage achieved. Must be at least the demon’s requirement and at most 100.','<input id="sq" type="number" inputmode="numeric" placeholder="e.g. 50, 98"><div id="sh" class="mut"></div>')}
+${fld('Video','Proof video. If the record was done on stream but not uploaded, give a Twitch link.<br><i>Note:</i> only submit well-formed URLs!','<input id="su" placeholder="e.g. https://youtu.be/cHEGAqOgddA">')}
+${fld('Raw footage','<span id="rd"></span>','<input id="sr" placeholder="https://drive.google.com/file/d/…/view">')}
+${fld('Platform','Was the record done on PC or on mobile?','<select id="spl"><option value="pc">PC</option><option value="mobile">Mobile 📱</option></select>')}
+${fld('Mod menu','Which mod menu did you use?','<select id="smm"><option value="">Select…</option><option>None</option><option>Eclipse</option><option>QOLMod</option><option>MegaHack</option><option>Other</option></select>')}
+${fld('Notes or comments','Any additional notes for the moderator.','<textarea id="sn" rows="3"></textarea>')}
+<button id="sb" class="btn">Submit record</button><p id="se" class="err"></p></div>`;
+}
+function bindSub(){
+  if(!$('#sl'))return;
+  const upd=()=>{const i=+$('#sl').value,L=S.levels[i]||{};$('#sxw').style.display=i<0?'':'none';$('#rd').textContent=i<MN()?'Unedited, untrimmed video on a non-compressing service (e.g. Google Drive). Required for every main list demon (top '+MN()+').':'Optional for demons outside the main list.';$('#sh').textContent=L.listPct?'Minimum for this demon: '+L.listPct+'%':''};
+  $('#sl').onchange=upd;upd();
+  $('#sb').onclick=async()=>{
+    const i=+$('#sl').value,L=S.levels[i]||{name:$('#sx').value.trim(),listPct:''},q=+$('#sq').value,u=$('#su').value.trim(),r=$('#sr').value.trim(),e=$('#se');e.className='err';let t='';
+    if(i<0&&L.name.length<2)t='Enter the level name.';
+    else if(!(q>=(+L.listPct||1)&&q<=100))t='Progress must be between '+(L.listPct||1)+' and 100.';
+    else if(!/^https?:\/\//i.test(u))t='Enter a valid video URL.';
+    else if(i<MN()&&!/^https?:\/\//i.test(r))t='Raw footage is required for main list demons.';
+    else if(!$('#smm').value)t='Select your mod menu.';
+    if(t){e.textContent=t;return}
+    try{await api('/api/submit',{method:'POST',body:JSON.stringify({lvl:L.name,platform:$('#spl').value,mod:$('#smm').value,custom:i<0,lid:i<0?$('#sy').value.trim():'',pct:q,video:u,raw:r,notes:$('#sn').value})});e.className='ok';e.textContent='Submitted ✓ The mods have been notified on Discord.';$('#sb').disabled=true}catch(x){e.textContent=x.message}
+  };
+}
+
+function adm(){
+  const e=ei>=0?S.levels[ei]:{},n=msg;msg='';
+  return `${n?`<p class="ok" style="margin:16px 12px">${n}</p>`:''}
+<div class="card"><h3>Pending submissions (${subs.length})</h3>${subs.length?subs.map(s=>`<div class="rec" style="display:block"><b>${esc(s.player)}</b> – ${esc(s.lvl)}${s.custom?` <span class="err">⚠ not on the list${s.lid?' (ID '+esc(s.lid)+')':''}</span>`:''} – ${esc(s.pct)}% · ${s.mobile?'📱 Mobile':'💻 PC'} · ${esc(s.mod||'?')}<br><a href="${safe(s.video)}" target="_blank" rel="noopener">video</a>${s.raw?` · <a href="${safe(s.raw)}" target="_blank" rel="noopener">raw</a>`:''}<br><span class="mut">${esc(s.notes||'')}</span><br><button class="btn" data-rv="${s.id}|1">Accept</button> <button class="red" data-rv="${s.id}|0">Refuse</button></div>`).join(''):'<p class="mut">Nothing pending.</p>'}</div>
+<div class="card form"><h3>List size</h3><p class="mut">Number of places on the demonlist. Main list = first half, extended = second half. Levels below the limit are hidden from the list and earn no points (legacy), but nothing is deleted.</p><input id="ls" type="number" min="1" value="${SZ()}"><div class="mut">Main: #1–${MN()} · Extended: #${MN()+1}–${SZ()} · Legacy: #${SZ()+1}+</div><button id="lb" class="btn">Apply</button></div>
+<div class="card form"><h3>Level editor</h3><select id="es"><option value="-1">+ New level</option>${S.levels.map((l,i)=>`<option value="${i}"${i==ei?' selected':''}>#${i+1} ${esc(l.name)}</option>`).join('')}</select><input id="f_pos" type="number" min="1" placeholder="Position (empty = bottom)" value="${ei>=0?ei+1:''}">${F.map(([k,t])=>`<input id="f_${k}" placeholder="${t}" value="${esc(e[k])}">`).join('')}<button id="sv" class="btn">${ei>=0?'Save changes':'Add level'}</button></div>
+<div class="card form"><h3>Add a verified record</h3><select id="rl">${S.levels.map((l,i)=>`<option value="${i}">#${i+1} ${esc(l.name)}</option>`).join('')}</select><input id="rp" placeholder="Player name"><input id="rq" type="number" placeholder="Progress %"><input id="ru" placeholder="Video link"><select id="rm"><option value="">PC</option><option value="1">Mobile 📱</option></select><button id="rb" class="btn">Add record</button></div>
+<div class="card"><h3>Order and deletion</h3>${S.levels.map((l,i)=>`<div class="row"><span>#${i+1} ${esc(l.name)}${i>=SZ()?' <span class="mut">(hidden)</span>':''}</span><span><button data-u="${i}">↑</button> <button data-d="${i}">↓</button> <button data-x="${i}">✕</button></span></div>${(l.records||[]).map((r,j)=>`<div class="row sm"><span>${esc(r.p)} · ${esc(r.pct)}%</span><button data-r="${i}.${j}">✕</button></div>`).join('')}`).join('')}</div>
+<div class="card form"><h3>Backup</h3><p class="mut">Download all site data (levels, records, players) or restore a backup file.</p><button id="bk" class="btn">Download backup</button><label class="mut">Restore a backup file<input id="rs" type="file" accept=".json"></label></div>
+<div style="margin:0 12px"><button id="pub" class="btn" style="width:100%">Save to site</button></div>`;
+}
+function bindAdm(){
+  $('#es').onchange=()=>{ei=+$('#es').value;render()};
+  $('#lb').onclick=()=>{S.size=Math.max(1,parseInt($('#ls').value)||30);msg='List size set ✓ — click “Save to site” to put it online.';render()};
+  $('#sv').onclick=()=>{const v={};F.forEach(([k])=>v[k]=$('#f_'+k).value.trim());if(!v.name)return;const L=S.levels,was=ei;let lv;
+    if(was>=0){lv=L[was];Object.assign(lv,v)}else{lv={records:[],...v};L.push(lv)}
+    const def=was>=0?was+1:L.length,p=Math.min(L.length,Math.max(1,parseInt($('#f_pos').value)||def));
+    L.splice(L.indexOf(lv),1);L.splice(p-1,0,lv);ei=p-1;msg='Saved ✓ — now at position #'+p+'. Click “Save to site” to put it online.';render()};
+  $('#rb').onclick=()=>{const p=$('#rp').value.trim(),u=$('#ru').value.trim(),q=+$('#rq').value;if(p&&u&&q>0&&S.levels.length){S.levels[+$('#rl').value].records.push({p,pct:q,url:u,mobile:!!$('#rm').value});msg='Record added ✓ — click “Save to site”.';render()}};
+  document.querySelectorAll('[data-u],[data-d],[data-x],[data-r]').forEach(b=>b.onclick=()=>{const d=b.dataset,L=S.levels;
+    if(d.u!=null){const i=+d.u;if(i>0)[L[i-1],L[i]]=[L[i],L[i-1]]}else if(d.d!=null){const i=+d.d;if(i<L.length-1)[L[i+1],L[i]]=[L[i],L[i+1]]}else if(d.x!=null)L.splice(+d.x,1);else{const[i,j]=d.r.split('.').map(Number);L[i].records.splice(j,1)}ei=-1;render()});
+  document.querySelectorAll('[data-rv]').forEach(b=>b.onclick=async()=>{const[id,ok]=b.dataset.rv.split('|');let reason='';if(ok==='0'){reason=prompt('Reason for refusal (optional)');if(reason===null)return}
+    try{const rv=await api('/api/review',{method:'POST',body:JSON.stringify({id,ok:ok==='1',reason})});S=await api('/api/data');subs=await api('/api/subs');msg=ok==='1'?(rv.created?'Accepted ✓ — the level was added at the bottom of the list. Open the level editor to fill in its details and move it to its position.':'Accepted ✓ — posted on Discord.'):'Refused ✓ — posted on Discord.'}catch(e){msg='Error: '+e.message}render()});
+  bindBk();
+  $('#pub').onclick=async()=>{try{await api('/api/data',{method:'POST',body:JSON.stringify(S)});msg='Saved ✓';}catch(e){msg='Error: '+e.message}render()};
+}
+
+function render(){
+  const tabs=[['lvl','List'],['pl','Stats'],['sub','Submit']].concat(me?[['acc','Account']]:[]).concat(me&&me.mod?[['adm','Mods']]:[]);
+  let h=`<div class="top"><div class="logo">The Dasher’s<span> demonlist</span></div><div class="tools"><button id="tg" title="Light / dark theme">${dark()?'☀':'🌙'}</button><input type="color" id="tc" class="clr" title="Site color" value="${accent()}">${me?`<span class="mut">${esc(me.username)}${me.name?' · '+esc(me.name):''}</span> <button id="lo">Log out</button>`:'<button class="btn" data-login>Login with Discord</button>'}</div></div><nav>`+tabs.map(([k,n])=>`<button class="tab ${tab==k?'on':''}" data-t="${k}">${n}</button>`).join('')+'</nav>';
+  h+=tab=='lvl'?(sel>=0&&S.levels[sel]?detail(sel):lvl()):tab=='pl'?pl():tab=='sub'?sub():tab=='acc'?acc():adm();
+  $('#app').innerHTML=h;
+  document.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{tab=b.dataset.t;sel=-1;render()});
+  document.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>{sel=+b.dataset.open;render();scrollTo(0,0)});
+  document.querySelectorAll('[data-nav]').forEach(b=>b.onclick=()=>{const n=sel+ +b.dataset.nav;if(n>=0&&n<LN()){sel=n;render();scrollTo(0,0)}});
+  document.querySelectorAll('[data-back]').forEach(b=>b.onclick=()=>{sel=-1;render()});
+  document.querySelectorAll('[data-login]').forEach(b=>b.onclick=login);
+  if($('#lo'))$('#lo').onclick=()=>{localStorage.removeItem('tk');tk='';me=null;subs=[];tab='lvl';render()};
+  $('#tg').onclick=()=>{localStorage.setItem('theme',dark()?'light':'dark');applyTheme();render()};
+  $('#tc').oninput=e=>{localStorage.setItem('accent',e.target.value);applyTheme()};
+  if(tab=='sub')bindSub();
+  if(tab=='acc')bindAcc();
+  if(tab=='pl')bindSv();
+  if(tab=='adm')bindAdm();
+}
+(async()=>{
+  applyTheme();render();
+  try{players=await api('/api/players')}catch(e){}
+  try{S=await api('/api/data');S.levels=(S.levels||[]).map(l=>({records:[],...l}))}catch(e){}
+  if(tk){try{me=await api('/api/me');if(me.mod)subs=await api('/api/subs')}catch(e){tk='';localStorage.removeItem('tk')}}
+  render();
+})();
+</script></body></html>
